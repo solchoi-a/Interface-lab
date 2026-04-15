@@ -1,0 +1,224 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+#app { max-width: 420px; margin: 1rem auto; border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; background: var(--color-background-primary); display: flex; flex-direction: column; height: 620px; }
+#header { background: #1a1a2e; padding: 14px 18px; display: flex; align-items: center; gap: 10px; }
+#header .logo { font-size: 16px; font-weight: 500; color: #fff; letter-spacing: 1px; }
+#header .sub { font-size: 11px; color: rgba(255,255,255,0.6); }
+#header .dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
+#chat { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 88%; }
+.msg.bot { align-self: flex-start; }
+.msg.user { align-self: flex-end; }
+.bubble { padding: 10px 14px; border-radius: 16px; font-size: 13.5px; line-height: 1.55; }
+.bot .bubble { background: var(--color-background-secondary); color: var(--color-text-primary); border-bottom-left-radius: 4px; }
+.user .bubble { background: #1a1a2e; color: #fff; border-bottom-right-radius: 4px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { font-size: 12px; padding: 5px 11px; border-radius: 20px; border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); color: var(--color-text-secondary); cursor: pointer; transition: all 0.15s; }
+.chip:hover { background: var(--color-background-secondary); color: var(--color-text-primary); border-color: var(--color-border-primary); }
+#footer { padding: 12px 14px; border-top: 0.5px solid var(--color-border-tertiary); display: flex; gap: 8px; }
+#inp { flex: 1; padding: 9px 13px; font-size: 13px; border: 0.5px solid var(--color-border-secondary); border-radius: 20px; background: var(--color-background-secondary); color: var(--color-text-primary); outline: none; }
+#inp:focus { border-color: #1a1a2e; }
+#send { padding: 9px 16px; background: #1a1a2e; color: #fff; border: none; border-radius: 20px; font-size: 13px; cursor: pointer; }
+#send:hover { opacity: 0.85; }
+.typing { display: flex; gap: 4px; padding: 10px 14px; }
+.typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--color-text-tertiary); animation: bounce 1s infinite; }
+.typing span:nth-child(2) { animation-delay: 0.15s; }
+.typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+.tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-bottom: 5px; font-weight: 500; }
+.tag-pay { background: #e6f1fb; color: #185fa5; }
+.tag-leave { background: #eaf3de; color: #3b6d11; }
+.tag-welfare { background: #eeedfe; color: #534ab7; }
+.tag-recruit { background: #faeeda; color: #854f0b; }
+</style>
+
+<div id="app">
+  <div id="header">
+    <div>
+      <div class="logo">SIMMONS</div>
+      <div class="sub">HR 도우미</div>
+    </div>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:6px;">
+      <div class="dot"></div>
+      <span style="font-size:11px; color:rgba(255,255,255,0.6);">온라인</span>
+    </div>
+  </div>
+  <div id="chat"></div>
+  <div id="footer">
+    <input id="inp" placeholder="궁금한 점을 입력하세요..." />
+    <button id="send">전송</button>
+  </div>
+</div>
+
+<script>
+const FAQ = {
+  "인센티브 지급 기준": {
+    tag: "pay",
+    tagLabel: "급여",
+    answer: "인센티브는 소속별로 기준이 다릅니다.\n\n• 서울/이천 본사: 반기 실적 평가 후 개인 KPI 달성률에 따라 기본급의 50~200% 지급\n• 매장: 월 매출 목표 대비 달성률 기준, 팀/개인 성과 병행 반영\n\n정확한 기준은 HR팀 또는 소속 팀장을 통해 확인하실 수 있습니다.",
+    chips: ["인센티브 지급 시기는?", "매장 인센티브 계산법", "서울/이천 차이점"]
+  },
+  "인센티브 지급 시기는?": {
+    tag: "pay",
+    tagLabel: "급여",
+    answer: "인센티브 지급 일정은 다음과 같습니다.\n\n• 상반기 인센티브: 7월 급여일에 함께 지급\n• 하반기 인센티브: 다음해 1월 급여일에 지급\n• 매장 월 인센티브: 익월 15일 지급\n\n지급일이 휴일인 경우 직전 영업일에 지급됩니다.",
+    chips: ["급여일은 언제인가요?", "인센티브 지급 기준", "연차 사용 방법"]
+  },
+  "매장 인센티브 계산법": {
+    tag: "pay",
+    tagLabel: "급여",
+    answer: "매장 인센티브 계산 방식입니다.\n\n• 월 목표 100% 달성 시 → 기본 인센티브 지급\n• 110% 이상 달성 시 → 추가 보너스 적용\n• 팀 인센티브 70% + 개인 기여도 30% 반영\n\n자세한 계산식은 매장별 목표 KPI 문서를 참고하거나 매장 관리자에게 문의하세요.",
+    chips: ["인센티브 지급 기준", "인센티브 지급 시기는?", "복리후생 확인"]
+  },
+  "서울/이천 차이점": {
+    tag: "pay",
+    tagLabel: "급여",
+    answer: "서울과 이천 소속 직원의 인센티브 주요 차이점입니다.\n\n• 서울: 팀/사업부 실적 기반 + 개인 평가 반영\n• 이천: 생산/물류 목표 KPI 기반 + 팀 성과 반영\n• 공통 기준: 근속 1년 이상 직원 지급 대상\n\n소속 변경 시에는 변경 전후 기준 중 불리하지 않은 방향으로 적용됩니다.",
+    chips: ["인센티브 지급 기준", "소속 변경 절차"]
+  },
+  "연차 사용 방법": {
+    tag: "leave",
+    tagLabel: "연차/휴가",
+    answer: "연차 사용 절차는 다음과 같습니다.\n\n• 사용 최소 3일 전 팀장 승인 후 HR 시스템 등록\n• 당일 연차는 긴급 상황에 한해 팀장 구두 승인 후 사후 등록\n• 반차: 오전(09:00~13:00), 오후(13:00~18:00)\n• 미사용 연차는 연도 말 정산 후 이월 또는 수당 지급",
+    chips: ["연차 일수 확인", "육아휴직 신청 방법", "대체휴무 제도"]
+  },
+  "연차 일수 확인": {
+    tag: "leave",
+    tagLabel: "연차/휴가",
+    answer: "근속 연수에 따른 연차 일수입니다.\n\n• 1년 미만: 매월 1일 발생 (최대 11일)\n• 1년 이상: 15일 기본 부여\n• 3년 이상: 16일 (이후 2년마다 1일씩 추가)\n• 최대 25일 한도\n\nHR 시스템 '마이페이지 > 연차현황'에서 잔여 일수를 실시간으로 확인하실 수 있습니다.",
+    chips: ["연차 사용 방법", "대체휴무 제도", "인센티브 지급 기준"]
+  },
+  "복리후생 확인": {
+    tag: "welfare",
+    tagLabel: "복리후생",
+    answer: "SIMMONS 임직원 주요 복리후생입니다.\n\n• 건강검진: 연 1회 전 직원 지원\n• 경조사비: 본인/가족 경조사 지원금 지급\n• 교육비: 직무 관련 자격증 취득비 50% 지원\n• 매장 직원: 제품 구매 시 임직원 할인 적용\n• 서울/이천: 구내식당 또는 식대 별도 지원\n\n상세 내용은 사내 인트라넷 '복리후생 안내'를 확인하세요.",
+    chips: ["교육/자격증 지원", "경조사 신청 방법", "인센티브 지급 기준"]
+  },
+  "급여일은 언제인가요?": {
+    tag: "pay",
+    tagLabel: "급여",
+    answer: "SIMMONS 급여 지급일은 매월 25일입니다.\n\n• 25일이 토요일이면 → 24일(금) 지급\n• 25일이 일요일이면 → 23일(금) 지급\n• 공휴일 겹칠 경우 → 직전 영업일 지급\n\n급여명세서는 지급일 전날 HR 시스템을 통해 사전 확인하실 수 있습니다.",
+    chips: ["인센티브 지급 시기는?", "연차 사용 방법", "복리후생 확인"]
+  },
+  "소속 변경 절차": {
+    tag: "recruit",
+    tagLabel: "인사/발령",
+    answer: "소속 변경(발령) 절차는 아래와 같습니다.\n\n1. 팀장 → 사업부장 보고\n2. HR팀 발령 요청서 제출 (최소 2주 전)\n3. HR팀 검토 및 인사위원회 심의\n4. 발령 통보 및 인수인계 일정 조율\n\n본인 희망 발령은 사내 공모 또는 경력개발 면담을 통해 신청 가능합니다.",
+    chips: ["인센티브 지급 기준", "복리후생 확인", "연차 사용 방법"]
+  },
+  "대체휴무 제도": {
+    tag: "leave",
+    tagLabel: "연차/휴가",
+    answer: "대체휴무 제도 안내입니다.\n\n• 법정 공휴일 근무 시 → 1:1 대체휴무 부여\n• 매장 직원: 주말·공휴일 근무 대체휴무 다음달 내 사용 권장\n• 미사용 시 수당으로 전환 (팀장 및 HR 협의 후)\n\n대체휴무 등록은 근무 발생 3일 이내에 HR 시스템에 등록해야 합니다.",
+    chips: ["연차 사용 방법", "연차 일수 확인", "급여일은 언제인가요?"]
+  },
+  "육아휴직 신청 방법": {
+    tag: "leave",
+    tagLabel: "연차/휴가",
+    answer: "육아휴직 신청 방법입니다.\n\n• 신청 시기: 출산 전후 또는 자녀 8세 이하\n• 신청 절차: HR팀에 최소 30일 전 신청서 제출\n• 기간: 최대 1년 (분할 사용 가능)\n• 복직: 복직 예정일 2주 전 HR팀에 통보\n\n육아휴직 중 고용보험 급여 수령에 관한 안내는 HR팀에 별도 문의하세요.",
+    chips: ["연차 일수 확인", "대체휴무 제도", "복리후생 확인"]
+  },
+  "교육/자격증 지원": {
+    tag: "welfare",
+    tagLabel: "복리후생",
+    answer: "교육 및 자격증 취득 지원 안내입니다.\n\n• 직무 관련 자격증: 취득 비용 50% 지원 (연 최대 30만원)\n• 사내 교육: HR 교육 캘린더에서 신청 (무료)\n• 외부 교육: 팀장 승인 후 비용 선지출 → 영수증 제출 시 정산\n• 매장 직원: 제품 교육, 판매 스킬 교육 별도 운영\n\nHR 시스템 '교육신청' 메뉴에서 신청 가능합니다.",
+    chips: ["복리후생 확인", "소속 변경 절차", "인센티브 지급 기준"]
+  }
+};
+
+const MAIN_CHIPS = [
+  "인센티브 지급 기준",
+  "연차 사용 방법",
+  "급여일은 언제인가요?",
+  "복리후생 확인",
+  "소속 변경 절차"
+];
+
+const chat = document.getElementById('chat');
+const inp = document.getElementById('inp');
+const send = document.getElementById('send');
+
+function tagEl(tag, label) {
+  return `<span class="tag tag-${tag}">${label}</span>`;
+}
+
+function addMsg(type, text, chips, tag, tagLabel) {
+  const d = document.createElement('div');
+  d.className = `msg ${type}`;
+  let inner = '';
+  if (type === 'bot') {
+    inner += `<div class="bubble">`;
+    if (tag) inner += tagEl(tag, tagLabel);
+    if (tag) inner += '<br>';
+    inner += text.replace(/\n/g, '<br>');
+    inner += `</div>`;
+    if (chips && chips.length) {
+      inner += `<div class="chips">`;
+      chips.forEach(c => {
+        inner += `<span class="chip" data-q="${c}">${c}</span>`;
+      });
+      inner += `</div>`;
+    }
+  } else {
+    inner = `<div class="bubble">${text}</div>`;
+  }
+  d.innerHTML = inner;
+  d.querySelectorAll('.chip').forEach(el => {
+    el.addEventListener('click', () => handleQ(el.dataset.q));
+  });
+  chat.appendChild(d);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function showTyping() {
+  const d = document.createElement('div');
+  d.className = 'msg bot';
+  d.id = 'typing';
+  d.innerHTML = `<div class="bubble typing"><span></span><span></span><span></span></div>`;
+  chat.appendChild(d);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing');
+  if (t) t.remove();
+}
+
+function handleQ(q) {
+  addMsg('user', q);
+  showTyping();
+  setTimeout(() => {
+    removeTyping();
+    const item = FAQ[q];
+    if (item) {
+      addMsg('bot', item.answer, item.chips, item.tag, item.tagLabel);
+    } else {
+      addMsg('bot', '죄송합니다, 해당 질문에 대한 답변을 찾지 못했습니다.\n\nHR팀(hr@simmons.co.kr)으로 문의 주시면 빠르게 답변 드리겠습니다.', MAIN_CHIPS);
+    }
+  }, 700);
+}
+
+send.addEventListener('click', () => {
+  const v = inp.value.trim();
+  if (!v) return;
+  inp.value = '';
+  const matched = Object.keys(FAQ).find(k => v.includes(k.slice(0,4)) || k.includes(v.slice(0,4)));
+  addMsg('user', v);
+  showTyping();
+  setTimeout(() => {
+    removeTyping();
+    if (matched) {
+      const item = FAQ[matched];
+      addMsg('bot', item.answer, item.chips, item.tag, item.tagLabel);
+    } else {
+      addMsg('bot', '죄송합니다, 정확한 답변을 찾지 못했습니다.\n아래 자주 묻는 질문을 선택하거나, HR팀(hr@simmons.co.kr)으로 문의해 주세요.', MAIN_CHIPS);
+    }
+  }, 700);
+});
+
+inp.addEventListener('keydown', e => { if (e.key === 'Enter') send.click(); });
+
+addMsg('bot', '안녕하세요! SIMMONS HR 도우미입니다.\n급여, 인센티브, 연차, 복리후생 등 궁금한 점을 물어보세요.', MAIN_CHIPS);
+</script>
